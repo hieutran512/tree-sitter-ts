@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>tree-sitter-ts verification</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+    h1 { color: #569cd6; }
+    h2 { color: #dcdcaa; margin-top: 24px; }
+    .pass { color: #4ec9b0; }
+    .fail { color: #f44747; }
+    .section { margin: 12px 0; padding: 8px; background: #252526; border-radius: 4px; }
+    .label { color: #dcdcaa; }
+  </style>
+</head>
+<body>
+  <h1>tree-sitter-ts verification</h1>
+  <div id="results"></div>
+  <script type="module">
+    import {
+      tokenize, extractSymbols,
+      getProfile, getRegisteredLanguages, getSupportedExtensions,
+      builtinProfiles, registerProfile,
+      json, css, scss, python, go, javascript, typescript, cpp, html, markdown
+    } from './src/index.ts';
+
+    const el = document.getElementById('results');
+    const checks = [];
+
+    function check(name, condition) {
+      checks.push({ name, pass: !!condition });
+    }
+
+    // ========== SECTION 1: Schema & Registry ==========
+    checks.push({ name: '--- SCHEMA & REGISTRY ---', pass: true });
+
+    const langs = getRegisteredLanguages();
+    check('10 languages registered', langs.length === 10);
+    check('builtinProfiles has 10 entries', builtinProfiles.length === 10);
+
+    check('.ts -> typescript', getProfile('.ts')?.name === 'typescript');
+    check('.py -> python', getProfile('.py')?.name === 'python');
+    check('.go -> go', getProfile('.go')?.name === 'go');
+    check('.json -> json', getProfile('.json')?.name === 'json');
+    check('.js -> javascript', getProfile('.js')?.name === 'javascript');
+
+    check('scss extends css', scss.extends === 'css');
+    check('typescript extends javascript', typescript.extends === 'javascript');
+    check('python has indentation config', !!python.lexer.indentation);
+    check('json has grammar (Level 3)', !!json.grammar);
+
+    // ========== SECTION 2: Lexer - JavaScript ==========
+    checks.push({ name: '--- LEXER: JavaScript ---', pass: true });
+
+    const jsCode = `const x = 42;\nfunction hello(name) {\n  return "Hello " + name;\n}`;
+    const jsToks = tokenize(jsCode, 'javascript');
+
+    check('JS: produces tokens', jsToks.length > 0);
+    check('JS: first token is "const" keyword', jsToks[0]?.type === 'keyword' && jsToks[0]?.value === 'const');
+    check('JS: finds identifier "x"', jsToks.some(t => t.type === 'identifier' && t.value === 'x'));
+    check('JS: finds number 42', jsToks.some(t => t.type === 'number' && t.value === '42'));
+    check('JS: finds "function" keyword', jsToks.some(t => t.type === 'keyword' && t.value === 'function'));
+    check('JS: finds string "Hello "', jsToks.some(t => t.type === 'string' && t.value === '"Hello "'));
+    check('JS: finds operator +', jsToks.some(t => t.type === 'operator' && t.value === '+'));
+    check('JS: finds punctuation {', jsToks.some(t => t.type === 'punctuation' && t.value === '{'));
+    check('JS: no error tokens', !jsToks.some(t => t.type === 'error'));
+
+    // Template strings
+    const tplCode = '`hello ${name}`';
+    const tplToks = tokenize(tplCode, 'javascript');
+    check('JS template: starts with template_start', tplToks[0]?.type === 'template_start');
+    check('JS template: has template_expr_open', tplToks.some(t => t.type === 'template_expr_open'));
+    check('JS template: has identifier inside expr', tplToks.some(t => t.type === 'identifier' && t.value === 'name'));
+    check('JS template: ends with template_end', tplToks[tplToks.length - 1]?.type === 'template_end');
+
+    // Comments
+    const commentCode = '// line comment\n/* block\ncomment */\nvar a;';
+    const commentToks = tokenize(commentCode, 'javascript');
+    check('JS: finds line comment', commentToks.some(t => t.type === 'comment' && t.value.startsWith('//')));
+    check('JS: finds block comment', commentToks.some(t => t.type === 'comment' && t.value.includes('block')));
+
+    // ========== SECTION 3: Lexer - Python ==========
+    checks.push({ name: '--- LEXER: Python ---', pass: true });
+
+    const pyCode = `def greet(name):\n    print(f"Hello {name}")\n\nclass Foo:\n    pass`;
+    const pyToks = tokenize(pyCode, 'python');
+
+    check('PY: produces tokens', pyToks.length > 0);
+    check('PY: finds "def" keyword', pyToks.some(t => t.type === 'keyword' && t.value === 'def'));
+    check('PY: finds "class" keyword', pyToks.some(t => t.type === 'keyword' && t.value === 'class'));
+    check('PY: finds identifier "greet"', pyToks.some(t => t.type === 'identifier' && t.value === 'greet'));
+    check('PY: finds "print" builtin', pyToks.some(t => t.type === 'builtin' && t.value === 'print'));
+    check('PY: no error tokens', !pyToks.some(t => t.type === 'error'));
+
+    // Decorator
+    const decCode = '@staticmethod\ndef foo(): pass';
+    const decToks = tokenize(decCode, 'python');
+    check('PY: finds decorator', decToks.some(t => t.type === 'decorator'));
+
+    // ========== SECTION 4: Lexer - JSON ==========
+    checks.push({ name: '--- LEXER: JSON ---', pass: true });
+
+    const jsonCode = '{"name": "test", "count": 42, "active": true}';
+    const jsonToks = tokenize(jsonCode, 'json');
+
+    check('JSON: produces tokens', jsonToks.length > 0);
+    check('JSON: finds string "name"', jsonToks.some(t => t.type === 'string' && t.value === '"name"'));
+    check('JSON: finds number 42', jsonToks.some(t => t.type === 'number' && t.value === '42'));
+    check('JSON: finds constant true', jsonToks.some(t => t.type === 'constant' && t.value === 'true'));
+    check('JSON: no error tokens', !jsonToks.some(t => t.type === 'error'));
+
+    // ========== SECTION 5: Lexer - Go ==========
+    checks.push({ name: '--- LEXER: Go ---', pass: true });
+
+    const goCode = 'func main() {\n\tfmt.Println("hello")\n}';
+    const goToks = tokenize(goCode, 'go');
+
+    check('GO: finds "func" keyword', goToks.some(t => t.type === 'keyword' && t.value === 'func'));
+    check('GO: finds identifier "main"', goToks.some(t => t.type === 'identifier' && t.value === 'main'));
+    check('GO: finds string "hello"', goToks.some(t => t.type === 'string' && t.value === '"hello"'));
+    check('GO: no error tokens', !goToks.some(t => t.type === 'error'));
+
+    // ========== SECTION 6: Lexer - CSS ==========
+    checks.push({ name: '--- LEXER: CSS ---', pass: true });
+
+    const cssCode = '.container { margin: 10px; color: #ff0000; }';
+    const cssToks = tokenize(cssCode, 'css');
+
+    check('CSS: produces tokens', cssToks.length > 0);
+    check('CSS: finds number 10px', cssToks.some(t => t.type === 'number' && t.value === '10px'));
+    check('CSS: finds color #ff0000', cssToks.some(t => t.type === 'color'));
+    check('CSS: no error tokens', !cssToks.some(t => t.type === 'error'));
+
+    // ========== SECTION 7: Lexer - C++ ==========
+    checks.push({ name: '--- LEXER: C++ ---', pass: true });
+
+    const cppCode = '#include <iostream>\nint main() {\n  return 0;\n}';
+    const cppToks = tokenize(cppCode, 'cpp');
+
+    check('C++: finds preprocessor', cppToks.some(t => t.type === 'preprocessor'));
+    check('C++: finds "int" type', cppToks.some(t => t.type === 'type_keyword' && t.value === 'int'));
+    check('C++: finds "return" keyword', cppToks.some(t => t.type === 'keyword' && t.value === 'return'));
+    check('C++: no error tokens', !cppToks.some(t => t.type === 'error'));
+
+    // ========== SECTION 8: Lexer - TypeScript ==========
+    checks.push({ name: '--- LEXER: TypeScript ---', pass: true });
+
+    const tsCode = `interface User {\n  name: string;\n}\nconst greet = (u: User): string => u.name;`;
+    const tsToks = tokenize(tsCode, 'typescript');
+
+    check('TS: finds "interface" keyword', tsToks.some(t => t.type === 'ts_keyword' && t.value === 'interface'));
+    check('TS: finds type "User"', tsToks.some(t => t.type === 'type_name' && t.value === 'User'));
+    check('TS: finds arrow =>', tsToks.some(t => t.type === 'operator' && t.value === '=>'));
+    check('TS: no error tokens', !tsToks.some(t => t.type === 'error'));
+
+    // ========== SECTION 9: Symbol Extraction - JavaScript ==========
+    checks.push({ name: '--- SYMBOLS: JavaScript ---', pass: true });
+
+    const jsSymCode = `import { foo } from 'bar';
+const VERSION = "1.0";
+function hello(name) {
+  return name;
+}
+class MyClass {
+  constructor() {}
+}
+export default MyClass;`;
+
+    const jsSyms = extractSymbols(jsSymCode, 'javascript');
+
+    check('JS syms: found symbols', jsSyms.length > 0);
+    check('JS syms: found import', jsSyms.some(s => s.kind === 'import'));
+    check('JS syms: found function "hello"', jsSyms.some(s => s.kind === 'function' && s.name === 'hello'));
+    check('JS syms: found class "MyClass"', jsSyms.some(s => s.kind === 'class' && s.name === 'MyClass'));
+    check('JS syms: found export', jsSyms.some(s => s.kind === 'export'));
+
+    const helloSym = jsSyms.find(s => s.name === 'hello');
+    check('JS syms: hello starts at line 3', helloSym?.startLine === 3);
+    check('JS syms: hello ends at line 5', helloSym?.endLine === 5);
+
+    // ========== SECTION 10: Symbol Extraction - Python ==========
+    checks.push({ name: '--- SYMBOLS: Python ---', pass: true });
+
+    const pySymCode = `import os
+from pathlib import Path
+
+def greet(name):
+    print(name)
+
+class Animal:
+    def speak(self):
+        pass`;
+
+    const pySyms = extractSymbols(pySymCode, 'python');
+
+    check('PY syms: found symbols', pySyms.length > 0);
+    check('PY syms: found import', pySyms.some(s => s.kind === 'import'));
+    check('PY syms: found function "greet"', pySyms.some(s => s.kind === 'function' && s.name === 'greet'));
+    check('PY syms: found class "Animal"', pySyms.some(s => s.kind === 'class' && s.name === 'Animal'));
+
+    // ========== SECTION 11: Symbol Extraction - Go ==========
+    checks.push({ name: '--- SYMBOLS: Go ---', pass: true });
+
+    const goSymCode = `package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("hello")
+}
+
+type User struct {
+    Name string
+}`;
+
+    const goSyms = extractSymbols(goSymCode, 'go');
+
+    check('GO syms: found symbols', goSyms.length > 0);
+    check('GO syms: found import', goSyms.some(s => s.kind === 'import'));
+    check('GO syms: found function "main"', goSyms.some(s => s.kind === 'function' && s.name === 'main'));
+
+    // ========== SECTION 12: Symbol Extraction - TypeScript ==========
+    checks.push({ name: '--- SYMBOLS: TypeScript ---', pass: true });
+
+    const tsSymCode = `import { Router } from 'express';
+
+interface Config {
+  port: number;
+}
+
+type ID = string;
+
+enum Status {
+  Active,
+  Inactive
+}
+
+class Server {
+  start() {}
+}
+
+export const app = new Server();`;
+
+    const tsSyms = extractSymbols(tsSymCode, 'typescript');
+
+    check('TS syms: found symbols', tsSyms.length > 0);
+    check('TS syms: found import', tsSyms.some(s => s.kind === 'import'));
+    check('TS syms: found interface "Config"', tsSyms.some(s => s.kind === 'interface' && s.name === 'Config'));
+    check('TS syms: found type "ID"', tsSyms.some(s => s.kind === 'type' && s.name === 'ID'));
+    check('TS syms: found enum "Status"', tsSyms.some(s => s.kind === 'enum' && s.name === 'Status'));
+    check('TS syms: found class "Server"', tsSyms.some(s => s.kind === 'class' && s.name === 'Server'));
+    check('TS syms: found export', tsSyms.some(s => s.kind === 'export'));
+
+    // ========== RENDER RESULTS ==========
+    const passed = checks.filter(c => c.pass).length;
+    const sectionCount = checks.filter(c => c.name.startsWith('---')).length;
+    const total = checks.length - sectionCount;
+    const passedReal = passed - sectionCount;
+    el.innerHTML = `<div class="section"><span class="label">Results: </span><span class="${passedReal === total ? 'pass' : 'fail'}">${passedReal}/${total} passed</span></div>` +
+      checks.map(c => {
+        if (c.name.startsWith('---')) return `<h2>${c.name.replace(/---/g, '').trim()}</h2>`;
+        return `<div class="${c.pass ? 'pass' : 'fail'}">${c.pass ? '\u2713' : '\u2717'} ${c.name}</div>`;
+      }).join('');
+  </script>
+</body>
+</html>

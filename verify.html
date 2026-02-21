@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>tree-sitter-ts verification</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+    h1 { color: #569cd6; }
+    .pass { color: #4ec9b0; }
+    .fail { color: #f44747; }
+    .section { margin: 12px 0; padding: 8px; background: #252526; border-radius: 4px; }
+    .label { color: #dcdcaa; }
+  </style>
+</head>
+<body>
+  <h1>tree-sitter-ts verification</h1>
+  <div id="results"></div>
+  <script type="module">
+    import {
+      getProfile,
+      getRegisteredLanguages,
+      getSupportedExtensions,
+      builtinProfiles,
+      registerProfile,
+      json, css, scss, python, go, javascript, typescript, cpp, html, markdown
+    } from './src/index.ts';
+
+    const el = document.getElementById('results');
+    const checks = [];
+
+    function check(name, condition) {
+      checks.push({ name, pass: condition });
+    }
+
+    // Verify all profiles are registered
+    const langs = getRegisteredLanguages();
+    check('10 languages registered', langs.length === 10);
+    check('builtinProfiles has 10 entries', builtinProfiles.length === 10);
+
+    // Verify extension lookup
+    check('.ts -> typescript', getProfile('.ts')?.name === 'typescript');
+    check('.py -> python', getProfile('.py')?.name === 'python');
+    check('.go -> go', getProfile('.go')?.name === 'go');
+    check('.cpp -> cpp', getProfile('.cpp')?.name === 'cpp');
+    check('.html -> html', getProfile('.html')?.name === 'html');
+    check('.json -> json', getProfile('.json')?.name === 'json');
+    check('.css -> css', getProfile('.css')?.name === 'css');
+    check('.scss -> scss', getProfile('.scss')?.name === 'scss');
+    check('.md -> markdown', getProfile('.md')?.name === 'markdown');
+    check('.js -> javascript', getProfile('.js')?.name === 'javascript');
+    check('.tsx -> typescript', getProfile('.tsx')?.name === 'typescript');
+    check('.jsx -> javascript', getProfile('.jsx')?.name === 'javascript');
+
+    // Verify name lookup
+    check('getProfile("typescript") works', getProfile('typescript')?.displayName === 'TypeScript');
+    check('getProfile("python") works', getProfile('python')?.displayName === 'Python');
+
+    // Verify schema structure for each profile
+    for (const p of builtinProfiles) {
+      check(`${p.name}: has lexer`, !!p.lexer);
+      check(`${p.name}: has tokenTypes`, Object.keys(p.lexer.tokenTypes).length > 0);
+      check(`${p.name}: has states`, Object.keys(p.lexer.states).length > 0);
+      check(`${p.name}: has initialState`, !!p.lexer.initialState);
+      check(`${p.name}: initialState exists in states`, !!p.lexer.states[p.lexer.initialState]);
+    }
+
+    // Verify profile inheritance fields
+    check('scss extends css', scss.extends === 'css');
+    check('typescript extends javascript', typescript.extends === 'javascript');
+
+    // Verify structure rules exist for key profiles
+    check('typescript has structure', !!typescript.structure);
+    check('typescript has symbol rules', (typescript.structure?.symbols.length ?? 0) > 5);
+    check('python has indentation config', !!python.lexer.indentation);
+    check('html has embedded languages', (html.embeddedLanguages?.length ?? 0) > 0);
+    check('json has grammar (Level 3)', !!json.grammar);
+
+    // Verify matcher types used across profiles
+    const tsRules = typescript.lexer.states['default'].rules;
+    const matchKinds = new Set(tsRules.map(r => r.match.kind));
+    check('typescript uses "delimited" matcher', matchKinds.has('delimited'));
+    check('typescript uses "keywords" matcher', matchKinds.has('keywords'));
+    check('typescript uses "charSequence" matcher', matchKinds.has('charSequence'));
+    check('typescript uses "number" matcher', matchKinds.has('number'));
+    check('typescript uses "string" matcher', matchKinds.has('string'));
+    check('typescript uses "line" matcher', matchKinds.has('line'));
+    check('typescript uses "sequence" matcher', matchKinds.has('sequence'));
+
+    // Verify custom profile registration
+    const custom = {
+      name: 'test-lang', displayName: 'Test', version: '1.0.0',
+      fileExtensions: ['.test'],
+      lexer: {
+        tokenTypes: { text: { category: 'plain' } },
+        states: { default: { rules: [] } },
+        initialState: 'default',
+      },
+    };
+    registerProfile(custom);
+    check('custom profile registered', getProfile('test-lang')?.name === 'test-lang');
+    check('custom ext lookup', getProfile('.test')?.name === 'test-lang');
+
+    // Render results
+    const passed = checks.filter(c => c.pass).length;
+    const total = checks.length;
+    el.innerHTML = `<div class="section"><span class="label">Results: </span><span class="${passed === total ? 'pass' : 'fail'}">${passed}/${total} passed</span></div>` +
+      checks.map(c => `<div class="${c.pass ? 'pass' : 'fail'}">${c.pass ? '✓' : '✗'} ${c.name}</div>`).join('');
+  </script>
+</body>
+</html>
