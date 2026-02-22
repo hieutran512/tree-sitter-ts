@@ -19,6 +19,7 @@ import { php } from "./php.js";
 import { kotlin } from "./kotlin.js";
 import { swift } from "./swift.js";
 import { shell } from "./shell.js";
+import { bash } from "./bash.js";
 import { sql } from "./sql.js";
 import { toml } from "./toml.js";
 
@@ -44,6 +45,7 @@ export {
   kotlin,
   swift,
   shell,
+  bash,
   sql,
   toml,
 };
@@ -71,6 +73,7 @@ export const builtinProfiles: LanguageProfile[] = [
   kotlin,
   swift,
   shell,
+  bash,
   sql,
   toml,
 ];

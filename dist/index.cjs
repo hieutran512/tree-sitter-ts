@@ -22,6 +22,7 @@ var index_exports = {};
 __export(index_exports, {
   CharReader: () => CharReader,
   CompiledLexer: () => CompiledLexer,
+  bash: () => bash,
   builtinProfiles: () => builtinProfiles,
   compileCharClass: () => compileCharClass,
   compileMatcher: () => compileMatcher,
@@ -5331,7 +5332,41 @@ var swift = createGenericCodeProfile({
 var shell = createGenericCodeProfile({
   name: "shell",
   displayName: "Shell",
-  fileExtensions: [".sh", ".bash", ".zsh", ".ksh"],
+  fileExtensions: [".sh", ".zsh", ".ksh"],
+  mimeTypes: ["application/x-sh"],
+  lineComment: "#",
+  keywords: [
+    "if",
+    "then",
+    "else",
+    "elif",
+    "fi",
+    "for",
+    "while",
+    "until",
+    "do",
+    "done",
+    "case",
+    "esac",
+    "in",
+    "function",
+    "select",
+    "time",
+    "coproc",
+    "return",
+    "break",
+    "continue",
+    "readonly",
+    "local",
+    "export"
+  ]
+});
+
+// src/profiles/bash.ts
+var bash = createGenericCodeProfile({
+  name: "bash",
+  displayName: "Bash",
+  fileExtensions: [".bash"],
   mimeTypes: ["application/x-sh"],
   lineComment: "#",
   keywords: [
@@ -5667,6 +5702,7 @@ var builtinProfiles = [
   kotlin,
   swift,
   shell,
+  bash,
   sql,
   toml
 ];
@@ -5719,6 +5755,7 @@ function resolveLanguage(language) {
 0 && (module.exports = {
   CharReader,
   CompiledLexer,
+  bash,
   builtinProfiles,
   compileCharClass,
   compileMatcher,

@@ -29,6 +29,7 @@ const fixtures: Record<string, string> = {
     kotlin: "class App { fun run(): Int { return 1 } }",
     swift: "struct App { func run() -> Int { return 1 } }",
     shell: "#!/usr/bin/env bash\nfor x in a b; do echo $x; done\n",
+    bash: "#!/usr/bin/env bash\nfunction greet() { echo \"hi\"; }\n",
     sql: "create table users (id int, name text);",
     toml: "title = \"Demo\"\n[db]\nport = 5432\n",
 };
@@ -61,6 +62,7 @@ const languagesWithProfileSymbolRules = [
     "kotlin",
     "swift",
     "shell",
+    "bash",
     "sql",
 ];
 

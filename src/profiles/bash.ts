@@ -1,9 +1,9 @@
 import { createGenericCodeProfile } from "./common.js";
 
-export const shell = createGenericCodeProfile({
-    name: "shell",
-    displayName: "Shell",
-    fileExtensions: [".sh", ".zsh", ".ksh"],
+export const bash = createGenericCodeProfile({
+    name: "bash",
+    displayName: "Bash",
+    fileExtensions: [".bash"],
     mimeTypes: ["application/x-sh"],
     lineComment: "#",
     keywords: [

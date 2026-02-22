@@ -176,6 +176,7 @@ export {
   kotlin,
   swift,
   shell,
+  bash,
   sql,
   toml,
   builtinProfiles,

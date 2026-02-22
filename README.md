@@ -139,6 +139,7 @@ Current built-in profiles:
 - `kotlin`
 - `swift`
 - `shell`
+- `bash`
 - `sql`
 - `toml`
 
