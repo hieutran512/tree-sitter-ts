@@ -89,6 +89,7 @@ export type SymbolKind =
   | "function"
   | "class"
   | "method"
+  | "object"
   | "interface"
   | "type"
   | "enum"

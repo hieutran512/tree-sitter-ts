@@ -36,6 +36,104 @@ export function createGenericCodeProfile(
         stringDelimiters = ['"', "'"],
     } = options;
 
+    const keywordSet = new Set(keywords.map((keyword) => keyword.toLowerCase()));
+
+    const classKeywords = ["class", "struct", "interface", "enum", "trait", "protocol", "object"];
+    const functionKeywords = ["function", "fn", "def", "fun", "func", "sub"];
+    const namespaceKeywords = ["namespace", "package", "module"];
+    const sqlObjectKeywords = [
+        "table",
+        "view",
+        "function",
+        "procedure",
+        "trigger",
+        "index",
+        "schema",
+        "database",
+    ];
+
+    const availableClassKeywords = classKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableFunctionKeywords = functionKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableNamespaceKeywords = namespaceKeywords.filter((keyword) => keywordSet.has(keyword));
+    const hasSqlCreate = keywordSet.has("create") && sqlObjectKeywords.some((keyword) => keywordSet.has(keyword));
+
+    const symbols: NonNullable<LanguageProfile["structure"]>["symbols"] = [];
+
+    if (availableClassKeywords.length > 0) {
+        symbols.push({
+            name: "class_declaration",
+            kind: "class",
+            pattern: [
+                {
+                    anyOf: availableClassKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableFunctionKeywords.length > 0) {
+        symbols.push({
+            name: "function_declaration",
+            kind: "function",
+            pattern: [
+                {
+                    anyOf: availableFunctionKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableNamespaceKeywords.length > 0) {
+        symbols.push({
+            name: "namespace_declaration",
+            kind: "namespace",
+            pattern: [
+                {
+                    anyOf: availableNamespaceKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (hasSqlCreate) {
+        symbols.push({
+            name: "create_statement",
+            kind: "object",
+            pattern: [
+                { token: "keyword", value: "create" },
+                {
+                    optional: {
+                        anyOf: [
+                            { token: "keyword", value: "or" },
+                            { token: "keyword", value: "replace" },
+                        ],
+                    },
+                },
+                {
+                    optional: {
+                        anyOf: [
+                            { token: "keyword", value: "or" },
+                            { token: "keyword", value: "replace" },
+                        ],
+                    },
+                },
+                {
+                    anyOf: sqlObjectKeywords
+                        .filter((keyword) => keywordSet.has(keyword))
+                        .map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
     const rules: LanguageProfile["lexer"]["states"]["default"]["rules"] = [];
 
     if (blockComment) {
@@ -197,7 +295,7 @@ export function createGenericCodeProfile(
         },
         structure: {
             blocks: [{ name: "braces", open: "{", close: "}" }],
-            symbols: [],
+            symbols,
         },
     };
 }

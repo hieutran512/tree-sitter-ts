@@ -29,7 +29,7 @@ const fixtures: Record<string, string> = {
     kotlin: "class App { fun run(): Int { return 1 } }",
     swift: "struct App { func run() -> Int { return 1 } }",
     shell: "#!/usr/bin/env bash\nfor x in a b; do echo $x; done\n",
-    sql: "SELECT id, name FROM users WHERE id = 1;",
+    sql: "create table users (id int, name text);",
     toml: "title = \"Demo\"\n[db]\nport = 5432\n",
 };
 
@@ -42,7 +42,27 @@ const languagesWithSymbolExpectations = new Set([
     "typescript",
     "cpp",
     "markdown",
+    "java",
+    "csharp",
+    "rust",
+    "ruby",
+    "php",
+    "kotlin",
+    "swift",
+    "sql",
 ]);
+
+const languagesWithProfileSymbolRules = [
+    "java",
+    "csharp",
+    "rust",
+    "ruby",
+    "php",
+    "kotlin",
+    "swift",
+    "shell",
+    "sql",
+];
 
 describe("built-in profile registry", () => {
     test("all builtin profiles are registered by name and extension", () => {
@@ -70,6 +90,17 @@ describe("built-in profile registry", () => {
         expect(getProfile("unknown-language")).toBeUndefined();
         expect(getProfile(".unknownext")).toBeUndefined();
     });
+
+    test.each(languagesWithProfileSymbolRules)(
+        "%s profile has non-empty symbol rules",
+        (language) => {
+            const profile = getProfile(language);
+
+            expect(profile).toBeDefined();
+            expect(profile?.structure).toBeDefined();
+            expect(profile?.structure?.symbols.length ?? 0).toBeGreaterThan(0);
+        },
+    );
 });
 
 describe("tokenization coverage across languages", () => {
@@ -139,6 +170,33 @@ describe("tokenization coverage across languages", () => {
 
     test("tokenize throws for unknown language", () => {
         expect(() => tokenize("value", "unknown-language")).toThrow(/Unknown language/i);
+    });
+
+    test("toml tokenization recognizes core TOML syntax", () => {
+        const source = `# TOML demo config
+title = "tree-sitter-ts-highlight"
+enabled = true
+timeout = 30
+pi = 3.14159
+hosts = ["alpha", "beta"]
+
+[database]
+server = "192.168.1.1"
+ports = [8001, 8001, 8002]
+connection_max = 5000
+
+[owner]
+name = "Tom Preston-Werner"
+dob = 1979-05-27T07:32:00Z`;
+
+        const tokens = tokenize(source, "toml");
+
+        expect(tokens.some((token) => token.type === "comment")).toBe(true);
+        expect(tokens.some((token) => token.type === "operator" && token.value === "=")).toBe(true);
+        expect(tokens.some((token) => token.type === "punctuation" && token.value === "[")).toBe(true);
+        expect(tokens.some((token) => token.type === "punctuation" && token.value === "]")).toBe(true);
+        expect(tokens.some((token) => token.type === "datetime")).toBe(true);
+        expect(tokens.some((token) => token.type === "error")).toBe(false);
     });
 });
 

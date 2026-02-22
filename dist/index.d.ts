@@ -41,7 +41,7 @@ type TokenCategory = "keyword" | "identifier" | "string" | "number" | "comment" 
  * Symbol kinds for code structure classification.
  * Compatible with ragts CodeSymbol.kind and VS Code SymbolKind.
  */
-type SymbolKind = "function" | "class" | "method" | "interface" | "type" | "enum" | "module" | "variable" | "import" | "export" | "namespace" | "property" | "constant" | "other";
+type SymbolKind = "function" | "class" | "method" | "object" | "interface" | "type" | "enum" | "module" | "variable" | "import" | "export" | "namespace" | "property" | "constant" | "other";
 
 /** Complete lexer configuration for a language profile */
 interface LexerConfig {

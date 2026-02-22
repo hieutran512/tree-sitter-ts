@@ -4371,6 +4371,94 @@ function createGenericCodeProfile(options) {
     blockComment,
     stringDelimiters = ['"', "'"]
   } = options;
+  const keywordSet = new Set(keywords.map((keyword) => keyword.toLowerCase()));
+  const classKeywords = ["class", "struct", "interface", "enum", "trait", "protocol", "object"];
+  const functionKeywords = ["function", "fn", "def", "fun", "func", "sub"];
+  const namespaceKeywords = ["namespace", "package", "module"];
+  const sqlObjectKeywords = [
+    "table",
+    "view",
+    "function",
+    "procedure",
+    "trigger",
+    "index",
+    "schema",
+    "database"
+  ];
+  const availableClassKeywords = classKeywords.filter((keyword) => keywordSet.has(keyword));
+  const availableFunctionKeywords = functionKeywords.filter((keyword) => keywordSet.has(keyword));
+  const availableNamespaceKeywords = namespaceKeywords.filter((keyword) => keywordSet.has(keyword));
+  const hasSqlCreate = keywordSet.has("create") && sqlObjectKeywords.some((keyword) => keywordSet.has(keyword));
+  const symbols = [];
+  if (availableClassKeywords.length > 0) {
+    symbols.push({
+      name: "class_declaration",
+      kind: "class",
+      pattern: [
+        {
+          anyOf: availableClassKeywords.map((keyword) => ({ token: "keyword", value: keyword }))
+        },
+        { token: "identifier", capture: "name" }
+      ],
+      hasBody: false
+    });
+  }
+  if (availableFunctionKeywords.length > 0) {
+    symbols.push({
+      name: "function_declaration",
+      kind: "function",
+      pattern: [
+        {
+          anyOf: availableFunctionKeywords.map((keyword) => ({ token: "keyword", value: keyword }))
+        },
+        { token: "identifier", capture: "name" }
+      ],
+      hasBody: false
+    });
+  }
+  if (availableNamespaceKeywords.length > 0) {
+    symbols.push({
+      name: "namespace_declaration",
+      kind: "namespace",
+      pattern: [
+        {
+          anyOf: availableNamespaceKeywords.map((keyword) => ({ token: "keyword", value: keyword }))
+        },
+        { token: "identifier", capture: "name" }
+      ],
+      hasBody: false
+    });
+  }
+  if (hasSqlCreate) {
+    symbols.push({
+      name: "create_statement",
+      kind: "object",
+      pattern: [
+        { token: "keyword", value: "create" },
+        {
+          optional: {
+            anyOf: [
+              { token: "keyword", value: "or" },
+              { token: "keyword", value: "replace" }
+            ]
+          }
+        },
+        {
+          optional: {
+            anyOf: [
+              { token: "keyword", value: "or" },
+              { token: "keyword", value: "replace" }
+            ]
+          }
+        },
+        {
+          anyOf: sqlObjectKeywords.filter((keyword) => keywordSet.has(keyword)).map((keyword) => ({ token: "keyword", value: keyword }))
+        },
+        { token: "identifier", capture: "name" }
+      ],
+      hasBody: false
+    });
+  }
   const rules = [];
   if (blockComment) {
     rules.push({
@@ -4525,7 +4613,7 @@ function createGenericCodeProfile(options) {
     },
     structure: {
       blocks: [{ name: "braces", open: "{", close: "}" }],
-      symbols: []
+      symbols
     }
   };
 }
@@ -5339,12 +5427,155 @@ var sql = createGenericCodeProfile({
 });
 
 // src/profiles/toml.ts
-var toml = createYamlProfile(
-  "toml",
-  "TOML",
-  [".toml"],
-  ["application/toml", "text/toml"]
-);
+var toml = {
+  name: "toml",
+  displayName: "TOML",
+  version: "1.0.0",
+  fileExtensions: [".toml"],
+  mimeTypes: ["application/toml", "text/toml"],
+  lexer: {
+    charClasses: {
+      keyStart: {
+        union: [{ predefined: "letter" }, { chars: "_-" }]
+      },
+      keyPart: {
+        union: [{ predefined: "alphanumeric" }, { chars: "_-" }]
+      }
+    },
+    tokenTypes: {
+      comment: { category: "comment" },
+      datetime: { category: "string", subcategory: "datetime" },
+      key: { category: "identifier", subcategory: "key" },
+      string: { category: "string" },
+      number: { category: "number" },
+      constant: { category: "constant" },
+      operator: { category: "operator" },
+      punctuation: { category: "punctuation" },
+      whitespace: { category: "whitespace" },
+      newline: { category: "newline" },
+      text: { category: "plain" }
+    },
+    initialState: "default",
+    skipTokens: ["whitespace", "newline"],
+    states: {
+      default: {
+        rules: [
+          { match: { kind: "line", start: "#" }, token: "comment" },
+          {
+            match: {
+              kind: "pattern",
+              regex: "\\b\\d{4}-\\d{2}-\\d{2}(?:[Tt ]\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?)?(?:[Zz]|[+-]\\d{2}:\\d{2})?\\b"
+            },
+            token: "datetime"
+          },
+          {
+            match: { kind: "delimited", open: '"""', close: '"""', multiline: true, escape: "\\" },
+            token: "string"
+          },
+          {
+            match: { kind: "delimited", open: "'''", close: "'''", multiline: true },
+            token: "string"
+          },
+          {
+            match: { kind: "delimited", open: '"', close: '"', escape: "\\" },
+            token: "string"
+          },
+          {
+            match: { kind: "delimited", open: "'", close: "'" },
+            token: "string"
+          },
+          {
+            match: {
+              kind: "number",
+              integer: true,
+              float: true,
+              scientific: true,
+              hex: true,
+              octal: true,
+              binary: true,
+              separator: "_"
+            },
+            token: "number"
+          },
+          {
+            match: {
+              kind: "keywords",
+              words: ["true", "false"]
+            },
+            token: "constant"
+          },
+          {
+            match: {
+              kind: "charSequence",
+              first: { ref: "keyStart" },
+              rest: {
+                union: [{ ref: "keyPart" }, { chars: "." }]
+              }
+            },
+            token: "key"
+          },
+          {
+            match: { kind: "string", value: "=" },
+            token: "operator"
+          },
+          {
+            match: { kind: "string", value: ["[[", "]]", "[", "]", "{", "}", ","] },
+            token: "punctuation"
+          },
+          {
+            match: {
+              kind: "charSequence",
+              first: { predefined: "whitespace" },
+              rest: { predefined: "whitespace" }
+            },
+            token: "whitespace"
+          },
+          {
+            match: { kind: "charSequence", first: { predefined: "newline" } },
+            token: "newline"
+          },
+          {
+            match: {
+              kind: "charSequence",
+              first: { predefined: "any" },
+              rest: { negate: { predefined: "newline" } }
+            },
+            token: "text"
+          }
+        ]
+      }
+    }
+  },
+  structure: {
+    blocks: [
+      { name: "tables", open: "[", close: "]" },
+      { name: "inline-table", open: "{", close: "}" },
+      { name: "array", open: "[", close: "]" }
+    ],
+    symbols: [
+      {
+        name: "table",
+        kind: "namespace",
+        pattern: [
+          { token: "punctuation", value: "[" },
+          { token: "key", capture: "name" },
+          { token: "punctuation", value: "]" }
+        ],
+        hasBody: false
+      },
+      {
+        name: "array_table",
+        kind: "namespace",
+        pattern: [
+          { token: "punctuation", value: "[[" },
+          { token: "key", capture: "name" },
+          { token: "punctuation", value: "]]" }
+        ],
+        hasBody: false
+      }
+    ]
+  }
+};
 
 // src/profiles/resolver.ts
 function resolveProfile(profile, registry) {
