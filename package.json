@@ -1,6 +1,6 @@
 {
   "name": "tree-sitter-ts",
-  "version": "0.1.3-beta.2",
+  "version": "0.1.3",
   "description": "Pure TypeScript parser library with declarative language profiles. No WASM required.",
   "type": "module",
   "main": "./dist/index.cjs",
