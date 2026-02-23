@@ -29,10 +29,8 @@ export interface CodeSymbol {
   name: string;
   /** Symbol kind classification */
   kind: SymbolKind;
-  /** 1-based start line */
-  startLine: number;
-  /** 1-based end line */
-  endLine: number;
-  /** Nesting path for context (e.g., ['ClassName', 'methodName']) */
-  path?: string[];
+  /** Symbol name token span */
+  nameRange: Range;
+  /** Symbol full content span */
+  contentRange: Range;
 }

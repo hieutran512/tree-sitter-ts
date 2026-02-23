@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
 // Level 2: Structure Detection
 //
-// Identifies top-level constructs (functions, classes, etc.) from the
-// token stream WITHOUT a full grammar. Enables RAG chunking, code
-// folding, and symbol outline.
+// Identifies structural constructs (functions, classes, headings, tables,
+// tags, etc.) from the token stream WITHOUT a full grammar. Enables RAG
+// chunking, folding, and symbol outline.
 // ---------------------------------------------------------------------------
 
 import type { SymbolKind } from "./common.js";
@@ -17,7 +17,7 @@ export interface StructureConfig {
   /** Block delimiter pairs for nesting detection */
   blocks: BlockRule[];
 
-  /** Symbol detection rules - identify functions, classes, etc. */
+  /** Symbol detection rules - identify structural constructs */
   symbols: SymbolRule[];
 
   /** Folding region rules for editors */
@@ -45,7 +45,7 @@ export interface BlockRule {
 /**
  * Symbol detection rule.
  * Matches a sequence of token patterns to identify a language construct
- * (function, class, method, etc.) from the token stream.
+ * (function, class, heading, table, etc.) from the token stream.
  *
  * @example // JavaScript function declaration
  * {
@@ -81,7 +81,7 @@ export interface SymbolRule {
   /** Whether this symbol has a body (block) */
   hasBody?: boolean;
   /** How the body is delimited */
-  bodyStyle?: "braces" | "indentation" | "end-keyword";
+  bodyStyle?: "braces" | "indentation" | "end-keyword" | "markup-block";
   /** End keyword for bodyStyle 'end-keyword' (e.g., Ruby: 'end') */
   endKeyword?: string;
   /** Can this symbol appear inside another symbol? */

@@ -38,9 +38,19 @@ export function createGenericCodeProfile(
 
     const keywordSet = new Set(keywords.map((keyword) => keyword.toLowerCase()));
 
-    const classKeywords = ["class", "struct", "interface", "enum", "trait", "protocol", "object"];
+    const classKeywords = ["class", "object"];
+    const structKeywords = ["struct"];
+    const interfaceKeywords = ["interface", "trait", "protocol"];
+    const enumKeywords = ["enum"];
     const functionKeywords = ["function", "fn", "def", "fun", "func", "sub"];
-    const namespaceKeywords = ["namespace", "package", "module"];
+    const packageKeywords = ["package"];
+    const namespaceKeywords = ["namespace"];
+    const moduleKeywords = ["module", "mod"];
+    const typeKeywords = ["type", "typealias", "typedef"];
+    const variableKeywords = ["var", "let", "val"];
+    const constantKeywords = ["const", "readonly"];
+    const importKeywords = ["import", "use", "require", "require_once", "include", "include_once", "using"];
+    const exportKeywords = ["export"];
     const sqlObjectKeywords = [
         "table",
         "view",
@@ -53,8 +63,18 @@ export function createGenericCodeProfile(
     ];
 
     const availableClassKeywords = classKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableStructKeywords = structKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableInterfaceKeywords = interfaceKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableEnumKeywords = enumKeywords.filter((keyword) => keywordSet.has(keyword));
     const availableFunctionKeywords = functionKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availablePackageKeywords = packageKeywords.filter((keyword) => keywordSet.has(keyword));
     const availableNamespaceKeywords = namespaceKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableModuleKeywords = moduleKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableTypeKeywords = typeKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableVariableKeywords = variableKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableConstantKeywords = constantKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableImportKeywords = importKeywords.filter((keyword) => keywordSet.has(keyword));
+    const availableExportKeywords = exportKeywords.filter((keyword) => keywordSet.has(keyword));
     const hasSqlCreate = keywordSet.has("create") && sqlObjectKeywords.some((keyword) => keywordSet.has(keyword));
 
     const symbols: NonNullable<LanguageProfile["structure"]>["symbols"] = [];
@@ -66,6 +86,48 @@ export function createGenericCodeProfile(
             pattern: [
                 {
                     anyOf: availableClassKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableStructKeywords.length > 0) {
+        symbols.push({
+            name: "struct_declaration",
+            kind: "struct",
+            pattern: [
+                {
+                    anyOf: availableStructKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableInterfaceKeywords.length > 0) {
+        symbols.push({
+            name: "interface_declaration",
+            kind: "interface",
+            pattern: [
+                {
+                    anyOf: availableInterfaceKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableEnumKeywords.length > 0) {
+        symbols.push({
+            name: "enum_declaration",
+            kind: "enum",
+            pattern: [
+                {
+                    anyOf: availableEnumKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
                 },
                 { token: "identifier", capture: "name" },
             ],
@@ -101,7 +163,151 @@ export function createGenericCodeProfile(
         });
     }
 
+    if (availablePackageKeywords.length > 0) {
+        symbols.push({
+            name: "package_declaration",
+            kind: "package",
+            pattern: [
+                {
+                    anyOf: availablePackageKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableModuleKeywords.length > 0) {
+        symbols.push({
+            name: "module_declaration",
+            kind: "module",
+            pattern: [
+                {
+                    anyOf: availableModuleKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableTypeKeywords.length > 0) {
+        symbols.push({
+            name: "type_declaration",
+            kind: "type",
+            pattern: [
+                {
+                    anyOf: availableTypeKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableVariableKeywords.length > 0) {
+        symbols.push({
+            name: "variable_declaration",
+            kind: "variable",
+            pattern: [
+                {
+                    anyOf: availableVariableKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableConstantKeywords.length > 0) {
+        symbols.push({
+            name: "constant_declaration",
+            kind: "constant",
+            pattern: [
+                {
+                    anyOf: availableConstantKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+                { token: "identifier", capture: "name" },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableImportKeywords.length > 0) {
+        symbols.push({
+            name: "import_statement",
+            kind: "import",
+            pattern: [
+                {
+                    anyOf: availableImportKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+            ],
+            hasBody: false,
+        });
+    }
+
+    if (availableExportKeywords.length > 0) {
+        symbols.push({
+            name: "export_statement",
+            kind: "export",
+            pattern: [
+                {
+                    anyOf: availableExportKeywords.map((keyword) => ({ token: "keyword", value: keyword })),
+                },
+            ],
+            hasBody: false,
+        });
+    }
+
     if (hasSqlCreate) {
+        const sqlCreateObjects: Array<{
+            keyword: string;
+            kind: "table" | "view" | "function" | "procedure" | "trigger" | "index" | "schema" | "database";
+            name: string;
+        }> = [
+                { keyword: "table", kind: "table", name: "create_table_statement" },
+                { keyword: "view", kind: "view", name: "create_view_statement" },
+                { keyword: "function", kind: "function", name: "create_function_statement" },
+                { keyword: "procedure", kind: "procedure", name: "create_procedure_statement" },
+                { keyword: "trigger", kind: "trigger", name: "create_trigger_statement" },
+                { keyword: "index", kind: "index", name: "create_index_statement" },
+                { keyword: "schema", kind: "schema", name: "create_schema_statement" },
+                { keyword: "database", kind: "database", name: "create_database_statement" },
+            ];
+
+        for (const sqlObject of sqlCreateObjects) {
+            if (!keywordSet.has(sqlObject.keyword)) {
+                continue;
+            }
+
+            symbols.push({
+                name: sqlObject.name,
+                kind: sqlObject.kind,
+                pattern: [
+                    { token: "keyword", value: "create" },
+                    {
+                        optional: {
+                            anyOf: [
+                                { token: "keyword", value: "or" },
+                                { token: "keyword", value: "replace" },
+                            ],
+                        },
+                    },
+                    {
+                        optional: {
+                            anyOf: [
+                                { token: "keyword", value: "or" },
+                                { token: "keyword", value: "replace" },
+                            ],
+                        },
+                    },
+                    { token: "keyword", value: sqlObject.keyword },
+                    { token: "identifier", capture: "name" },
+                ],
+                hasBody: false,
+            });
+        }
+
         symbols.push({
             name: "create_statement",
             kind: "object",
@@ -438,7 +644,29 @@ export function createMarkupProfile(options: MarkupProfileOptions): LanguageProf
         },
         structure: {
             blocks: [],
-            symbols: [],
+            symbols: [
+                {
+                    name: "element",
+                    kind: "element",
+                    pattern: [
+                        { token: "tag_open", value: "<" },
+                        { token: "tag_name", capture: "name" },
+                    ],
+                    hasBody: false,
+                },
+                {
+                    name: "processing_instruction",
+                    kind: "processingInstruction",
+                    pattern: [{ token: "processing", capture: "name" }],
+                    hasBody: false,
+                },
+                {
+                    name: "cdata",
+                    kind: "cdata",
+                    pattern: [{ token: "cdata", capture: "name" }],
+                    hasBody: false,
+                },
+            ],
         },
     };
 }
@@ -469,7 +697,7 @@ export function createYamlProfile(
             },
             tokenTypes: {
                 comment: { category: "comment" },
-                key: { category: "identifier", subcategory: "key" },
+                key: { category: "key" },
                 string: { category: "string" },
                 number: { category: "number" },
                 constant: { category: "constant" },
@@ -551,7 +779,53 @@ export function createYamlProfile(
         },
         structure: {
             blocks: [],
-            symbols: [],
+            symbols: [
+                {
+                    name: "document_separator",
+                    kind: "directive",
+                    pattern: [{ token: "indicator", value: "---" }],
+                    hasBody: false,
+                },
+                {
+                    name: "document_end",
+                    kind: "directive",
+                    pattern: [{ token: "indicator", value: "..." }],
+                    hasBody: false,
+                },
+                {
+                    name: "mapping_pair",
+                    kind: "pair",
+                    pattern: [
+                        { token: "key", capture: "name" },
+                        { token: "indicator", value: ":" },
+                    ],
+                    hasBody: false,
+                },
+                {
+                    name: "sequence_item",
+                    kind: "listItem",
+                    pattern: [{ token: "indicator", value: "-" }],
+                    hasBody: false,
+                },
+                {
+                    name: "string_value",
+                    kind: "string",
+                    pattern: [{ token: "string", capture: "name" }],
+                    hasBody: false,
+                },
+                {
+                    name: "number_value",
+                    kind: "number",
+                    pattern: [{ token: "number", capture: "name" }],
+                    hasBody: false,
+                },
+                {
+                    name: "constant_value",
+                    kind: "constant",
+                    pattern: [{ token: "constant", capture: "name" }],
+                    hasBody: false,
+                },
+            ],
         },
     };
 }

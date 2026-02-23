@@ -29,7 +29,7 @@ export function tokenize(source: string, language: string): Token[] {
  *
  * @param source - The source code to analyze
  * @param language - Language name or file extension
- * @returns Array of symbols with name, kind, startLine, endLine
+ * @returns Array of symbols with name, kind, nameRange, and contentRange
  */
 export function extractSymbols(
   source: string,

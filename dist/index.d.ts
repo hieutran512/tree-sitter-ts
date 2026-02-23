@@ -36,12 +36,14 @@ type CharClass = {
  * Standard token categories for syntax highlighting.
  * Maps to VS Code / TextMate scope categories for theme compatibility.
  */
-type TokenCategory = "keyword" | "identifier" | "string" | "number" | "comment" | "operator" | "punctuation" | "type" | "decorator" | "tag" | "attribute" | "meta" | "regexp" | "escape" | "variable" | "constant" | "whitespace" | "newline" | "error" | "plain";
+type TokenCategory = "keyword" | "identifier" | "string" | "datetime" | "number" | "comment" | "operator" | "punctuation" | "type" | "decorator" | "tag" | "attribute" | "heading" | "link" | "key" | "meta" | "regexp" | "escape" | "variable" | "constant" | "whitespace" | "newline" | "error" | "plain";
 /**
- * Symbol kinds for code structure classification.
- * Compatible with ragts CodeSymbol.kind and VS Code SymbolKind.
+ * Symbol kinds for structure classification.
+ * Compatible with ragts CodeSymbol.kind and extends VS Code/LSP SymbolKind
+ * with markup/data/database-specific kinds.
+ * Use "other" only when no specific kind applies.
  */
-type SymbolKind = "function" | "class" | "method" | "object" | "interface" | "type" | "enum" | "module" | "variable" | "import" | "export" | "namespace" | "property" | "constant" | "other";
+type SymbolKind = "file" | "function" | "class" | "method" | "constructor" | "object" | "package" | "interface" | "struct" | "type" | "typeParameter" | "enum" | "enumMember" | "module" | "variable" | "field" | "parameter" | "import" | "export" | "namespace" | "key" | "property" | "constant" | "string" | "number" | "boolean" | "array" | "null" | "operator" | "event" | "label" | "directive" | "decorator" | "document" | "section" | "heading" | "blockquote" | "list" | "listItem" | "link" | "image" | "codeBlock" | "element" | "attribute" | "doctype" | "entity" | "processingInstruction" | "cdata" | "pair" | "mapping" | "sequence" | "table" | "arrayTable" | "database" | "schema" | "view" | "index" | "trigger" | "procedure" | "column" | "other";
 
 /** Complete lexer configuration for a language profile */
 interface LexerConfig {
@@ -243,7 +245,7 @@ interface IndentationConfig {
 interface StructureConfig {
     /** Block delimiter pairs for nesting detection */
     blocks: BlockRule[];
-    /** Symbol detection rules - identify functions, classes, etc. */
+    /** Symbol detection rules - identify structural constructs */
     symbols: SymbolRule[];
     /** Folding region rules for editors */
     folding?: FoldingRule[];
@@ -260,7 +262,7 @@ interface BlockRule {
 /**
  * Symbol detection rule.
  * Matches a sequence of token patterns to identify a language construct
- * (function, class, method, etc.) from the token stream.
+ * (function, class, heading, table, etc.) from the token stream.
  *
  * @example // JavaScript function declaration
  * {
@@ -296,7 +298,7 @@ interface SymbolRule {
     /** Whether this symbol has a body (block) */
     hasBody?: boolean;
     /** How the body is delimited */
-    bodyStyle?: "braces" | "indentation" | "end-keyword";
+    bodyStyle?: "braces" | "indentation" | "end-keyword" | "markup-block";
     /** End keyword for bodyStyle 'end-keyword' (e.g., Ruby: 'end') */
     endKeyword?: string;
     /** Can this symbol appear inside another symbol? */
@@ -520,12 +522,10 @@ interface CodeSymbol {
     name: string;
     /** Symbol kind classification */
     kind: SymbolKind;
-    /** 1-based start line */
-    startLine: number;
-    /** 1-based end line */
-    endLine: number;
-    /** Nesting path for context (e.g., ['ClassName', 'methodName']) */
-    path?: string[];
+    /** Symbol name token span */
+    nameRange: Range;
+    /** Symbol full content span */
+    contentRange: Range;
 }
 
 /** Compiled lexer ready to tokenize */
@@ -714,7 +714,7 @@ declare function tokenize(source: string, language: string): Token[];
  *
  * @param source - The source code to analyze
  * @param language - Language name or file extension
- * @returns Array of symbols with name, kind, startLine, endLine
+ * @returns Array of symbols with name, kind, nameRange, and contentRange
  */
 declare function extractSymbols(source: string, language: string): CodeSymbol[];
 /**

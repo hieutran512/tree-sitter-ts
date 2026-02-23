@@ -245,7 +245,7 @@ export const css: LanguageProfile = {
     symbols: [
       {
         name: "at_rule",
-        kind: "other",
+        kind: "directive",
         pattern: [{ token: "at_rule", capture: "name" }],
         hasBody: true,
         bodyStyle: "braces",

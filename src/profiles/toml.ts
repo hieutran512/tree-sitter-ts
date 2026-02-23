@@ -17,8 +17,8 @@ export const toml: LanguageProfile = {
         },
         tokenTypes: {
             comment: { category: "comment" },
-            datetime: { category: "string", subcategory: "datetime" },
-            key: { category: "identifier", subcategory: "key" },
+            datetime: { category: "datetime" },
+            key: { category: "key" },
             string: { category: "string" },
             number: { category: "number" },
             constant: { category: "constant" },
@@ -129,7 +129,7 @@ export const toml: LanguageProfile = {
         symbols: [
             {
                 name: "table",
-                kind: "namespace",
+                kind: "table",
                 pattern: [
                     { token: "punctuation", value: "[" },
                     { token: "key", capture: "name" },
@@ -139,11 +139,20 @@ export const toml: LanguageProfile = {
             },
             {
                 name: "array_table",
-                kind: "namespace",
+                kind: "arrayTable",
                 pattern: [
                     { token: "punctuation", value: "[[" },
                     { token: "key", capture: "name" },
                     { token: "punctuation", value: "]]" },
+                ],
+                hasBody: false,
+            },
+            {
+                name: "key_value",
+                kind: "pair",
+                pattern: [
+                    { token: "key", capture: "name" },
+                    { token: "operator", value: "=" },
                 ],
                 hasBody: false,
             },

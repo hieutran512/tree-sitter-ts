@@ -264,7 +264,7 @@ export const cpp: LanguageProfile = {
       },
       {
         name: "template_declaration",
-        kind: "other",
+        kind: "typeParameter",
         pattern: [
           { token: "keyword", value: "template" },
           { token: "operator", value: "<" },

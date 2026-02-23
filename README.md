@@ -37,7 +37,55 @@ console.log(tokens[0]);
 // }
 
 console.log(symbols);
-// [{ name: "Service", kind: "class", startLine: 2, endLine: 4 }]
+// [{
+//   name: "Service",
+//   kind: "class",
+//   nameRange: { startLine: 2, startCol: 13, endLine: 2, endCol: 20 },
+//   contentRange: { startLine: 2, startCol: 1, endLine: 4, endCol: 2 }
+// }]
+```
+
+## CLI
+
+After installing globally (or using `npx`), run:
+
+```bash
+tree-sitter-ts <source-file> <token|symbols> [--language <name-or-extension>]
+```
+
+Examples:
+
+```bash
+tree-sitter-ts ./src/app.ts token
+tree-sitter-ts ./src/app.ts symbols
+tree-sitter-ts ./snippet.txt token --language typescript
+```
+
+CLI output is deterministic JSON so you can inspect by eye and parse by machine:
+
+```json
+{
+  "ok": true,
+  "extract": "token",
+  "sourceFile": "./src/app.ts",
+  "language": ".ts",
+  "count": 42,
+  "result": []
+}
+```
+
+When using `symbols`, each symbol item includes only `name`, `kind`, `nameRange`, and `contentRange`.
+
+On failure, CLI returns non-zero exit code and JSON error payload:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "INVALID_EXTRACT",
+    "message": "Invalid extract mode: \"ast\". Use \"token\" or \"symbols\"."
+  }
+}
 ```
 
 You can resolve language by:
@@ -109,9 +157,15 @@ interface Token {
 interface CodeSymbol {
   name: string;
   kind: SymbolKind;
+  nameRange: Range;
+  contentRange: Range;
+}
+
+interface Range {
   startLine: number;
+  startCol: number;
   endLine: number;
-  path?: string[];
+  endCol: number;
 }
 ```
 

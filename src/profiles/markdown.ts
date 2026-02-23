@@ -10,7 +10,7 @@ export const markdown: LanguageProfile = {
 
   lexer: {
     tokenTypes: {
-      heading: { category: "keyword", subcategory: "heading" },
+      heading: { category: "heading" },
       code_fence_open: { category: "meta", subcategory: "code-fence" },
       code_fence_close: { category: "meta", subcategory: "code-fence" },
       code_content: { category: "string", subcategory: "code" },
@@ -18,10 +18,12 @@ export const markdown: LanguageProfile = {
       inline_code: { category: "string", subcategory: "inline-code" },
       bold: { category: "keyword", subcategory: "bold" },
       italic: { category: "keyword", subcategory: "italic" },
-      link_text: { category: "string", subcategory: "link-text" },
-      link_url: { category: "variable", subcategory: "link-url" },
+      link_text: { category: "link", subcategory: "text" },
+      link_url: { category: "link", subcategory: "url" },
       image_marker: { category: "keyword", subcategory: "image" },
       list_marker: { category: "punctuation", subcategory: "list" },
+      table_separator: { category: "punctuation", subcategory: "table-separator" },
+      table_row: { category: "meta", subcategory: "table-row" },
       blockquote: { category: "punctuation", subcategory: "blockquote" },
       hr: { category: "punctuation", subcategory: "hr" },
       html_tag: { category: "tag" },
@@ -147,6 +149,22 @@ export const markdown: LanguageProfile = {
             match: { kind: "string", value: ["---", "***", "___"] },
             token: "hr",
           },
+          // Table separator row
+          {
+            match: {
+              kind: "pattern",
+              regex: "\\|?\\s*:?-{3,}:?\\s*(?:\\|\\s*:?-{3,}:?\\s*)+\\|?",
+            },
+            token: "table_separator",
+          },
+          // Table row
+          {
+            match: {
+              kind: "pattern",
+              regex: "\\|[^\\n]*\\|",
+            },
+            token: "table_row",
+          },
           // Blockquote
           {
             match: {
@@ -271,16 +289,55 @@ export const markdown: LanguageProfile = {
     symbols: [
       {
         name: "heading",
-        kind: "other",
+        kind: "heading",
         pattern: [{ token: "heading", capture: "name" }],
         hasBody: false,
       },
       {
-        name: "fenced_code_block",
-        kind: "other",
+        name: "code_block",
+        kind: "codeBlock",
         pattern: [{ token: "code_fence_open", capture: "name" }],
         hasBody: true,
-        bodyStyle: "braces",
+        bodyStyle: "markup-block",
+      },
+      {
+        name: "code_span",
+        kind: "codeBlock",
+        pattern: [{ token: "inline_code", capture: "name" }],
+        hasBody: false,
+      },
+      {
+        name: "list_item",
+        kind: "listItem",
+        pattern: [{ token: "list_marker", capture: "name" }],
+        hasBody: true,
+        bodyStyle: "markup-block",
+      },
+      {
+        name: "table",
+        kind: "table",
+        pattern: [{ token: "table_row", capture: "name" }],
+        hasBody: true,
+        bodyStyle: "markup-block",
+      },
+      {
+        name: "blockquote",
+        kind: "blockquote",
+        pattern: [{ token: "blockquote", capture: "name" }],
+        hasBody: true,
+        bodyStyle: "markup-block",
+      },
+      {
+        name: "link",
+        kind: "link",
+        pattern: [{ token: "link_url", capture: "name" }],
+        hasBody: false,
+      },
+      {
+        name: "image",
+        kind: "image",
+        pattern: [{ token: "image_marker", capture: "name" }],
+        hasBody: false,
       },
     ],
   },

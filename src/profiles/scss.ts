@@ -251,7 +251,7 @@ export const scss: LanguageProfile = {
       },
       {
         name: "at_rule",
-        kind: "other",
+        kind: "directive",
         pattern: [{ token: "at_rule", capture: "name" }],
         hasBody: true,
         bodyStyle: "braces",

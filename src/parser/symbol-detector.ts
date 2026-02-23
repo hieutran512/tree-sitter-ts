@@ -2,7 +2,7 @@
 // Symbol Detector
 //
 // Matches SymbolRule patterns against a token stream to identify
-// language constructs (functions, classes, methods, etc.).
+// structural constructs (functions, classes, headings, tables, etc.).
 // ---------------------------------------------------------------------------
 
 import type { SymbolRule, TokenPatternStep } from "../schema/structure.js";
@@ -19,6 +19,8 @@ interface PatternMatch {
   endIndex: number;
   /** Captured values by name */
   captures: Record<string, string>;
+  /** Captured token positions by capture name (index in filtered token array) */
+  captureIndices: Record<string, number>;
 }
 
 /**
@@ -50,37 +52,50 @@ export function detectSymbols(
       if (!match) continue;
 
       const name = match.captures["name"] ?? rule.name;
-      const startToken = filtered[match.startIndex].token;
-      const startLine = startToken.range.start.line;
+      const startOriginalIndex = filtered[match.startIndex].originalIndex;
+      const lastMatchOriginalIndex = filtered[match.endIndex - 1]?.originalIndex ?? startOriginalIndex;
 
-      let endLine = startLine;
+      let endOriginalIndex = lastMatchOriginalIndex;
 
       // Find the body end
       if (rule.hasBody) {
         if (rule.bodyStyle === "braces") {
           // Find the next brace block after the pattern match
-          const afterOrigIdx = filtered[match.endIndex - 1]?.originalIndex ?? 0;
-          const block = findNextBlock(blockSpans, afterOrigIdx, "braces");
+          const block = findNextBlock(blockSpans, lastMatchOriginalIndex, "braces");
           if (block) {
-            endLine = tokens[block.closeIndex].range.end.line;
+            endOriginalIndex = block.closeIndex;
           }
         } else if (rule.bodyStyle === "indentation") {
           // For indentation-based bodies, find where indentation returns to
           // the same or lower level
-          const baseIndent = startToken.range.start.column;
-          endLine = findIndentationEnd(tokens, filtered[match.endIndex - 1]?.originalIndex ?? 0, baseIndent);
+          const baseIndent = tokens[startOriginalIndex].range.start.column;
+          endOriginalIndex = findIndentationEndIndex(tokens, lastMatchOriginalIndex, baseIndent);
+        } else if (rule.bodyStyle === "markup-block") {
+          // For markup blocks (Markdown tables, lists, blockquotes), find next blank line or EOF
+          endOriginalIndex = findMarkupBlockEndIndex(tokens, lastMatchOriginalIndex);
         }
       } else {
         // No body: symbol ends at end of current line or semicolon
-        const lastMatchOrigIdx = filtered[match.endIndex - 1]?.originalIndex ?? 0;
-        endLine = findStatementEnd(tokens, lastMatchOrigIdx);
+        endOriginalIndex = findStatementEndIndex(tokens, lastMatchOriginalIndex);
       }
+
+      const nameOriginalIndex =
+        match.captureIndices["name"] !== undefined
+          ? filtered[match.captureIndices["name"]].originalIndex
+          : startOriginalIndex;
+
+      const nameToken = tokens[nameOriginalIndex] ?? tokens[startOriginalIndex];
+      const startToken = tokens[startOriginalIndex];
+      const endToken = tokens[endOriginalIndex] ?? tokens[lastMatchOriginalIndex];
 
       symbols.push({
         name,
         kind: rule.kind,
-        startLine,
-        endLine,
+        nameRange: nameToken.range,
+        contentRange: {
+          start: startToken.range.start,
+          end: endToken.range.end,
+        },
       });
 
       // Mark the matched filtered indices as used
@@ -90,8 +105,13 @@ export function detectSymbols(
     }
   }
 
-  // Sort by start line
-  symbols.sort((a, b) => a.startLine - b.startLine);
+  // Sort by content start position
+  symbols.sort((a, b) => {
+    if (a.contentRange.start.line === b.contentRange.start.line) {
+      return a.contentRange.start.column - b.contentRange.start.column;
+    }
+    return a.contentRange.start.line - b.contentRange.start.line;
+  });
   return symbols;
 }
 
@@ -105,6 +125,7 @@ function tryMatch(
   pattern: TokenPatternStep[],
 ): PatternMatch | null {
   const captures: Record<string, string> = {};
+  const captureIndices: Record<string, number> = {};
   let idx = startIdx;
 
   for (let pi = 0; pi < pattern.length; pi++) {
@@ -120,7 +141,7 @@ function tryMatch(
       let found = false;
       const limit = Math.min(idx + maxTokens, filtered.length);
       for (let si = idx; si < limit; si++) {
-        if (matchSingleStep(filtered[si].token, nextStep, captures)) {
+        if (matchSingleStep(filtered[si].token, nextStep, captures, captureIndices, si)) {
           idx = si;
           found = true;
           break;
@@ -137,7 +158,7 @@ function tryMatch(
 
     if ("optional" in step) {
       // Try to match, but don't fail if it doesn't
-      if (matchSingleStep(filtered[idx].token, step.optional, captures)) {
+      if (matchSingleStep(filtered[idx].token, step.optional, captures, captureIndices, idx)) {
         idx++;
       }
       continue;
@@ -146,7 +167,7 @@ function tryMatch(
     if ("anyOf" in step) {
       let anyMatched = false;
       for (const alt of step.anyOf) {
-        if (matchSingleStep(filtered[idx].token, alt, captures)) {
+        if (matchSingleStep(filtered[idx].token, alt, captures, captureIndices, idx)) {
           anyMatched = true;
           idx++;
           break;
@@ -161,6 +182,7 @@ function tryMatch(
       if (!matchTokenStep(filtered[idx].token, step)) return null;
       if (step.capture) {
         captures[step.capture] = filtered[idx].token.value;
+        captureIndices[step.capture] = idx;
       }
       idx++;
       continue;
@@ -169,21 +191,26 @@ function tryMatch(
     return null; // unknown step type
   }
 
-  return { startIndex: startIdx, endIndex: idx, captures };
+  return { startIndex: startIdx, endIndex: idx, captures, captureIndices };
 }
 
 function matchSingleStep(
   token: Token,
   step: TokenPatternStep,
   captures: Record<string, string>,
+  captureIndices: Record<string, number>,
+  index: number,
 ): boolean {
   if ("token" in step) {
     if (!matchTokenStep(token, step)) return false;
-    if (step.capture) captures[step.capture] = token.value;
+    if (step.capture) {
+      captures[step.capture] = token.value;
+      captureIndices[step.capture] = index;
+    }
     return true;
   }
   if ("anyOf" in step) {
-    return step.anyOf.some((alt) => matchSingleStep(token, alt, captures));
+    return step.anyOf.some((alt) => matchSingleStep(token, alt, captures, captureIndices, index));
   }
   return false;
 }
@@ -202,12 +229,12 @@ function matchTokenStep(
 // ---------------------------------------------------------------------------
 
 /** Find where an indentation-based body ends */
-function findIndentationEnd(
+function findIndentationEndIndex(
   tokens: Token[],
   afterIndex: number,
   baseIndent: number,
 ): number {
-  let lastContentLine = tokens[afterIndex]?.range.start.line ?? 1;
+  let lastContentIndex = afterIndex;
   let foundBody = false;
 
   for (let i = afterIndex + 1; i < tokens.length; i++) {
@@ -215,33 +242,32 @@ function findIndentationEnd(
     // Skip whitespace and newlines
     if (tok.category === "whitespace" || tok.category === "newline") continue;
 
-    const line = tok.range.start.line;
     const col = tok.range.start.column;
 
     if (!foundBody) {
       // First non-whitespace after the header - must be indented
       if (col > baseIndent) {
         foundBody = true;
-        lastContentLine = line;
+        lastContentIndex = i;
       } else {
         // Not indented - no body
-        return lastContentLine;
+        return lastContentIndex;
       }
     } else {
       // In body - check if we've de-dented back to base or further
       if (col <= baseIndent) {
-        return lastContentLine;
+        return lastContentIndex;
       }
-      lastContentLine = line;
+      lastContentIndex = i;
     }
   }
 
-  return lastContentLine;
+  return lastContentIndex;
 }
 
 /** Find the end of a statement (next newline or semicolon at depth 0) */
-function findStatementEnd(tokens: Token[], fromIndex: number): number {
-  let line = tokens[fromIndex]?.range.end.line ?? 1;
+function findStatementEndIndex(tokens: Token[], fromIndex: number): number {
+  let endIndex = fromIndex;
   let depth = 0;
 
   for (let i = fromIndex + 1; i < tokens.length; i++) {
@@ -251,14 +277,48 @@ function findStatementEnd(tokens: Token[], fromIndex: number): number {
     if (tok.value === "}" || tok.value === ")" || tok.value === "]") depth--;
 
     if (depth === 0) {
-      if (tok.value === ";") return tok.range.end.line;
-      if (tok.category === "newline" && depth <= 0) return line;
+      if (tok.value === ";") return i;
+      if (tok.category === "newline" && depth <= 0) return endIndex;
     }
 
     if (tok.category !== "whitespace" && tok.category !== "newline") {
-      line = tok.range.end.line;
+      endIndex = i;
     }
   }
 
-  return line;
+  return endIndex;
+}
+
+/** Find the end of a markup block (Markdown table/list/blockquote) by scanning until blank line */
+function findMarkupBlockEndIndex(tokens: Token[], fromIndex: number): number {
+  let endIndex = fromIndex;
+  let lastContentLine = tokens[fromIndex]?.range.start.line ?? 1;
+  let blankLineCount = 0;
+
+  for (let i = fromIndex + 1; i < tokens.length; i++) {
+    const tok = tokens[i];
+
+    if (tok.category === "newline") {
+      // Track consecutive blank lines (newlines with only whitespace between them)
+      if (i + 1 < tokens.length && tokens[i + 1].category === "newline") {
+        blankLineCount++;
+      } else {
+        blankLineCount = 0;
+      }
+
+      // Stop on blank line (two consecutive newlines or end of content)
+      if (blankLineCount > 0) {
+        return endIndex;
+      }
+      continue;
+    }
+
+    if (tok.category !== "whitespace") {
+      endIndex = i;
+      lastContentLine = tok.range.start.line;
+      blankLineCount = 0;
+    }
+  }
+
+  return endIndex;
 }

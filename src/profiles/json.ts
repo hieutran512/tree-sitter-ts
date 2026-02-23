@@ -73,7 +73,49 @@ export const json: LanguageProfile = {
       { name: "object", open: "{", close: "}" },
       { name: "array", open: "[", close: "]" },
     ],
-    symbols: [],
+    symbols: [
+      {
+        name: "object",
+        kind: "object",
+        pattern: [{ token: "punctuation", value: "{" }],
+        hasBody: true,
+        bodyStyle: "braces",
+      },
+      {
+        name: "array",
+        kind: "array",
+        pattern: [{ token: "punctuation", value: "[" }],
+        hasBody: true,
+        bodyStyle: "braces",
+      },
+      {
+        name: "pair",
+        kind: "pair",
+        pattern: [
+          { token: "string", capture: "name" },
+          { token: "punctuation", value: ":" },
+        ],
+        hasBody: false,
+      },
+      {
+        name: "string_value",
+        kind: "string",
+        pattern: [{ token: "string", capture: "name" }],
+        hasBody: false,
+      },
+      {
+        name: "number_value",
+        kind: "number",
+        pattern: [{ token: "number", capture: "name" }],
+        hasBody: false,
+      },
+      {
+        name: "constant_value",
+        kind: "constant",
+        pattern: [{ token: "constant", capture: "name" }],
+        hasBody: false,
+      },
+    ],
   },
 
   grammar: {

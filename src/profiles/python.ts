@@ -330,7 +330,7 @@ export const python: LanguageProfile = {
       },
       {
         name: "decorated_definition",
-        kind: "other",
+        kind: "decorator",
         pattern: [{ token: "decorator", capture: "name" }],
         hasBody: false,
       },

@@ -53,18 +53,34 @@ const languagesWithSymbolExpectations = new Set([
     "sql",
 ]);
 
-const languagesWithProfileSymbolRules = [
-    "java",
-    "csharp",
-    "rust",
-    "ruby",
-    "php",
-    "kotlin",
-    "swift",
-    "shell",
-    "bash",
-    "sql",
-];
+const languagesWithProfileSymbolRules = builtinLanguageNames;
+
+const expectedSymbolRulesByLanguage: Record<string, string[]> = {
+    markdown: [
+        "heading",
+        "code_block",
+        "code_span",
+        "list_item",
+        "table",
+        "blockquote",
+        "link",
+        "image",
+    ],
+    html: ["doctype", "element", "entity"],
+    json: ["object", "array", "pair", "string_value", "number_value", "constant_value"],
+    yaml: ["document_separator", "mapping_pair", "sequence_item", "string_value", "number_value", "constant_value"],
+    xml: ["element", "processing_instruction", "cdata"],
+    sql: ["create_table_statement", "create_view_statement", "create_index_statement"],
+    java: ["class_declaration", "interface_declaration", "enum_declaration", "package_declaration", "import_statement"],
+    csharp: ["class_declaration", "struct_declaration", "interface_declaration", "enum_declaration", "namespace_declaration"],
+    rust: ["struct_declaration", "enum_declaration", "function_declaration", "module_declaration", "import_statement"],
+    ruby: ["class_declaration", "function_declaration", "module_declaration"],
+    php: ["class_declaration", "interface_declaration", "function_declaration", "namespace_declaration", "import_statement"],
+    kotlin: ["class_declaration", "function_declaration", "interface_declaration", "package_declaration", "variable_declaration"],
+    swift: ["class_declaration", "struct_declaration", "interface_declaration", "enum_declaration", "function_declaration"],
+    shell: ["function_declaration", "constant_declaration"],
+    bash: ["function_declaration", "constant_declaration"],
+};
 
 describe("built-in profile registry", () => {
     test("all builtin profiles are registered by name and extension", () => {
@@ -101,6 +117,20 @@ describe("built-in profile registry", () => {
             expect(profile).toBeDefined();
             expect(profile?.structure).toBeDefined();
             expect(profile?.structure?.symbols.length ?? 0).toBeGreaterThan(0);
+        },
+    );
+
+    test.each(Object.entries(expectedSymbolRulesByLanguage))(
+        "%s profile includes expected detailed symbol rules",
+        (language, expectedRuleNames) => {
+            const profile = getProfile(language);
+
+            expect(profile).toBeDefined();
+            const ruleNames = new Set((profile?.structure?.symbols ?? []).map((rule) => rule.name));
+
+            for (const expectedRuleName of expectedRuleNames) {
+                expect(ruleNames.has(expectedRuleName)).toBe(true);
+            }
         },
     );
 });

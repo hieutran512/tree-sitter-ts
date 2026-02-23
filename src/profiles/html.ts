@@ -162,7 +162,29 @@ export const html: LanguageProfile = {
 
   structure: {
     blocks: [],
-    symbols: [],
+    symbols: [
+      {
+        name: "doctype",
+        kind: "doctype",
+        pattern: [{ token: "doctype", capture: "name" }],
+        hasBody: false,
+      },
+      {
+        name: "element",
+        kind: "element",
+        pattern: [
+          { token: "tag_open", value: "<" },
+          { token: "tag_name", capture: "name" },
+        ],
+        hasBody: false,
+      },
+      {
+        name: "entity",
+        kind: "entity",
+        pattern: [{ token: "entity", capture: "name" }],
+        hasBody: false,
+      },
+    ],
   },
 
   embeddedLanguages: [

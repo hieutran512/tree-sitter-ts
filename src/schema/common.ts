@@ -59,6 +59,7 @@ export type TokenCategory =
   | "keyword" // language keywords (if, for, class, etc.)
   | "identifier" // variable/function names
   | "string" // string literals
+  | "datetime" // date/time literals (e.g., TOML/YAML timestamps)
   | "number" // numeric literals
   | "comment" // comments (line and block)
   | "operator" // operators (+, -, =, etc.)
@@ -67,6 +68,9 @@ export type TokenCategory =
   | "decorator" // decorators/annotations (@)
   | "tag" // HTML/JSX tags
   | "attribute" // HTML/JSX attributes
+  | "heading" // markdown/org headings
+  | "link" // links/URLs/references
+  | "key" // mapping/object keys (JSON/YAML/TOML)
   | "meta" // preprocessor, shebang, etc.
   | "regexp" // regular expression literals
   | "escape" // escape sequences in strings
@@ -77,27 +81,75 @@ export type TokenCategory =
   | "error"
   | "plain"; // fallback / unknown
 
-// ---------------------------------------------------------------------------
-// Symbol kinds for code structure
-// ---------------------------------------------------------------------------
-
 /**
- * Symbol kinds for code structure classification.
- * Compatible with ragts CodeSymbol.kind and VS Code SymbolKind.
+ * Symbol kinds for structure classification.
+ * Compatible with ragts CodeSymbol.kind and extends VS Code/LSP SymbolKind
+ * with markup/data/database-specific kinds.
+ * Use "other" only when no specific kind applies.
  */
 export type SymbolKind =
+  // Core / LSP-aligned kinds
+  | "file"
   | "function"
   | "class"
   | "method"
+  | "constructor"
   | "object"
+  | "package"
   | "interface"
+  | "struct"
   | "type"
+  | "typeParameter"
   | "enum"
+  | "enumMember"
   | "module"
   | "variable"
+  | "field"
+  | "parameter"
   | "import"
   | "export"
   | "namespace"
+  | "key"
   | "property"
   | "constant"
+  | "string"
+  | "number"
+  | "boolean"
+  | "array"
+  | "null"
+  | "operator"
+  | "event"
+  | "label"
+  | "directive"
+  | "decorator"
+  // Markup / document kinds
+  | "document"
+  | "section"
+  | "heading"
+  | "blockquote"
+  | "list"
+  | "listItem"
+  | "link"
+  | "image"
+  | "codeBlock"
+  | "element"
+  | "attribute"
+  | "doctype"
+  | "entity"
+  | "processingInstruction"
+  | "cdata"
+  // Data format kinds
+  | "pair"
+  | "mapping"
+  | "sequence"
+  | "table"
+  | "arrayTable"
+  // SQL / database kinds
+  | "database"
+  | "schema"
+  | "view"
+  | "index"
+  | "trigger"
+  | "procedure"
+  | "column"
   | "other";
