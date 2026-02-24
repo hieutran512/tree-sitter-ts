@@ -4,7 +4,7 @@
         "rootDir": ".",
         "moduleResolution": "node",
         "types": [
-            "jest",
+            "vitest/globals",
             "node"
         ],
         "noEmit": true

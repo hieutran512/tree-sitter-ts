@@ -292,7 +292,6 @@ function findStatementEndIndex(tokens: Token[], fromIndex: number): number {
 /** Find the end of a markup block (Markdown table/list/blockquote) by scanning until blank line */
 function findMarkupBlockEndIndex(tokens: Token[], fromIndex: number): number {
   let endIndex = fromIndex;
-  let lastContentLine = tokens[fromIndex]?.range.start.line ?? 1;
   let blankLineCount = 0;
 
   for (let i = fromIndex + 1; i < tokens.length; i++) {
@@ -315,7 +314,6 @@ function findMarkupBlockEndIndex(tokens: Token[], fromIndex: number): number {
 
     if (tok.category !== "whitespace") {
       endIndex = i;
-      lastContentLine = tok.range.start.line;
       blankLineCount = 0;
     }
   }
