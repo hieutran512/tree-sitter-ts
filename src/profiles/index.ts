@@ -22,6 +22,7 @@ import { shell } from "./shell.js";
 import { bash } from "./bash.js";
 import { sql } from "./sql.js";
 import { toml } from "./toml.js";
+import { plaintext } from "./plaintext.js";
 
 // Re-export individual profiles
 export {
@@ -48,6 +49,7 @@ export {
   bash,
   sql,
   toml,
+  plaintext,
 };
 export { resolveProfile } from "./resolver.js";
 
@@ -76,6 +78,7 @@ export const builtinProfiles: LanguageProfile[] = [
   bash,
   sql,
   toml,
+  plaintext,
 ];
 
 // ---------------------------------------------------------------------------

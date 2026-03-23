@@ -22,9 +22,7 @@ interface CliError {
     message: string;
     code:
     | "INVALID_ARGS"
-    | "INVALID_EXTRACT"
-    | "LANGUAGE_REQUIRED"
-    | "UNKNOWN_LANGUAGE";
+    | "INVALID_EXTRACT";
 }
 
 type ParsedCliArgs = CliOptions | CliHelp | CliError;
@@ -81,29 +79,14 @@ export function parseCliArgs(argv: string[]): ParsedCliArgs {
         }
     }
 
-    const language = resolveLanguageInput(sourceFile, languageFromFlag);
-    if (!language) {
-        return {
-            kind: "error",
-            code: "LANGUAGE_REQUIRED",
-            message:
-                "Unable to detect language from file extension. Pass --language <name-or-extension>.",
-        };
-    }
-
-    if (!getProfile(language)) {
-        return {
-            kind: "error",
-            code: "UNKNOWN_LANGUAGE",
-            message: `Unknown language: \"${language}\"`,
-        };
-    }
+    const language = resolveLanguageInput(sourceFile, languageFromFlag) ?? "plaintext";
+    const resolvedLanguage = getProfile(language) ? language : "plaintext";
 
     return {
         kind: "run",
         sourceFile,
         extract: extractArg,
-        language,
+        language: resolvedLanguage,
     };
 }
 

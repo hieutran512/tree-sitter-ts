@@ -70,13 +70,10 @@ export function extractSymbolsWithProfile(
 // ======================== HELPERS ========================
 
 function resolveLanguage(language: string): LanguageProfile {
-  const profile = getProfileFromRegistry(language);
-  if (!profile) {
-    throw new Error(
-      `Unknown language: "${language}". Use getRegisteredLanguages() to see available languages.`,
-    );
+  if (!language) {
+    return getProfileFromRegistry("plaintext")!;
   }
-  return profile;
+  return getProfileFromRegistry(language) ?? getProfileFromRegistry("plaintext")!;
 }
 
 // ======================== RE-EXPORTS ========================

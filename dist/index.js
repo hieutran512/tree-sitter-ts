@@ -749,7 +749,6 @@ function findStatementEndIndex(tokens, fromIndex) {
 }
 function findMarkupBlockEndIndex(tokens, fromIndex) {
   let endIndex = fromIndex;
-  let lastContentLine = tokens[fromIndex]?.range.start.line ?? 1;
   let blankLineCount = 0;
   for (let i = fromIndex + 1; i < tokens.length; i++) {
     const tok = tokens[i];
@@ -766,7 +765,6 @@ function findMarkupBlockEndIndex(tokens, fromIndex) {
     }
     if (tok.category !== "whitespace") {
       endIndex = i;
-      lastContentLine = tok.range.start.line;
       blankLineCount = 0;
     }
   }
@@ -5975,6 +5973,50 @@ var toml = {
   }
 };
 
+// src/profiles/plaintext.ts
+var plaintext = {
+  name: "plaintext",
+  displayName: "Plain Text",
+  version: "1.0.0",
+  fileExtensions: [".txt"],
+  lexer: {
+    charClasses: {},
+    tokenTypes: {
+      text: { category: "plain" },
+      whitespace: { category: "whitespace" },
+      newline: { category: "newline" }
+    },
+    initialState: "default",
+    skipTokens: ["whitespace", "newline"],
+    states: {
+      default: {
+        rules: [
+          {
+            match: {
+              kind: "charSequence",
+              first: { predefined: "whitespace" },
+              rest: { predefined: "whitespace" }
+            },
+            token: "whitespace"
+          },
+          {
+            match: { kind: "charSequence", first: { predefined: "newline" } },
+            token: "newline"
+          },
+          {
+            match: {
+              kind: "charSequence",
+              first: { predefined: "any" },
+              rest: { negate: { predefined: "newline" } }
+            },
+            token: "text"
+          }
+        ]
+      }
+    }
+  }
+};
+
 // src/profiles/resolver.ts
 function resolveProfile(profile, registry) {
   if (!profile.extends) return profile;
@@ -6067,7 +6109,8 @@ var builtinProfiles = [
   shell,
   bash,
   sql,
-  toml
+  toml,
+  plaintext
 ];
 var profilesByName = /* @__PURE__ */ new Map();
 var profilesByExtension = /* @__PURE__ */ new Map();
@@ -6106,13 +6149,10 @@ function extractSymbolsWithProfile(source, profile) {
   return extractSymbolsFromProfile(source, profile);
 }
 function resolveLanguage(language) {
-  const profile = getProfile(language);
-  if (!profile) {
-    throw new Error(
-      `Unknown language: "${language}". Use getRegisteredLanguages() to see available languages.`
-    );
+  if (!language) {
+    return getProfile("plaintext");
   }
-  return profile;
+  return getProfile(language) ?? getProfile("plaintext");
 }
 export {
   CharReader,

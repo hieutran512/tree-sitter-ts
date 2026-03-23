@@ -32,6 +32,7 @@ const fixtures: Record<string, string> = {
     bash: "#!/usr/bin/env bash\nfunction greet() { echo \"hi\"; }\n",
     sql: "create table users (id int, name text);",
     toml: "title = \"Demo\"\n[db]\nport = 5432\n",
+    plaintext: "hello world",
 };
 
 const languagesWithSymbolExpectations = new Set([
@@ -53,7 +54,9 @@ const languagesWithSymbolExpectations = new Set([
     "sql",
 ]);
 
-const languagesWithProfileSymbolRules = builtinLanguageNames;
+const languagesWithProfileSymbolRules = builtinLanguageNames.filter(
+    (name) => name !== "plaintext",
+);
 
 const expectedSymbolRulesByLanguage: Record<string, string[]> = {
     markdown: [
@@ -200,8 +203,10 @@ describe("tokenization coverage across languages", () => {
         },
     );
 
-    test("tokenize throws for unknown language", () => {
-        expect(() => tokenize("value", "unknown-language")).toThrow(/Unknown language/i);
+    test("tokenize falls back to plaintext for unknown language", () => {
+        const tokens = tokenize("hello world", "unknown-language");
+        expect(tokens.length).toBeGreaterThan(0);
+        expect(tokens.every((t) => t.category === "plain" || t.category === "whitespace" || t.category === "newline")).toBe(true);
     });
 
     test("toml tokenization recognizes core TOML syntax", () => {
@@ -272,7 +277,8 @@ describe("symbol extraction coverage across languages", () => {
         },
     );
 
-    test("extractSymbols throws for unknown language", () => {
-        expect(() => extractSymbols("value", "unknown-language")).toThrow(/Unknown language/i);
+    test("extractSymbols falls back to plaintext for unknown language", () => {
+        const symbols = extractSymbols("hello world", "unknown-language");
+        expect(symbols).toEqual([]);
     });
 });

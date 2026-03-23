@@ -7,7 +7,8 @@
       "Bash(npm ls:*)",
       "Bash(npm install:*)",
       "mcp__Claude_Preview__preview_start",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(npm test)"
     ]
   }
 }
